@@ -1,82 +1,57 @@
 class Solution:
     def cherryPickup(self, grid: 'List[List[int]]') -> 'int':
-        # PATH_HALF = len(grid)+len(grid[0])-1
-        # PATH_FULL = 2*PATH_HALF-1
-        # cmax = 0
-        # Paths = [(grid[0][0], ((0, 0),))]
-        # while Paths:
-        #     val, path = Paths.pop()
-        #     if val - len(path) + 2*(len(grid)+len(grid[0]))-3 < cmax:
-        #         continue
-        #     if len(path) == PATH_FULL:
-        #         cmax = max(cmax, val)
-        #     else:
-        #         u, v = path[-1]
-        #         uvs = []
-        #         if len(path) < PATH_HALF:
-        #             if u+1 < len(grid):
-        #                 uvs.append((u+1, v))
-        #             if v+1 < len(grid[0]):
-        #                 uvs.append((u, v+1))
-        #         else:
-        #             if u:
-        #                 uvs.append((u-1, v))
-        #             if v:
-        #                 uvs.append((u, v-1))
-        #         for uu, vv in uvs:
-        #             valN = val
-        #             if grid[uu][vv] == 1 and (uu, vv) not in path:
-        #                 valN += 1
-        #             if grid[uu][vv] != -1:
-        #                 Paths.append((valN, path + ((uu, vv),)))
-        # return cmax
         m, n = len(grid), len(grid[0])
-        Cherries = {}
-        for i in range(m):
-            for j in range(n):
-                if grid[i][j] == 1:
-                    Cherries[(i, j)] = len(Cherries)
-        CollectedList = [[frozenset()] for i in range(m) for j in range(n)]
-        if (0, 0) in Cherries:
-            cid = Cherries[(0, 0)] # Cherries[(0, 0)] = 0
-            CollectedList[0][0][k] = [frozenset({cid})]
-        for i in range(m):
-            for j in range(n):
-                if i:
-                    CollectedList[i][j] = CollectedList[i-1][j]
-                    if j:
-                        # merge
-                        for collects in CollectedList[i][j-1]:
-                            # TODO
-                elif j:
-                    CollectedList[i][j] = CollectedList[i][j-1]
-                
-                if (i, j) in Cherries:
-                    cid = Cherries[(i, j)]
-                    for k in range(len(CollectedList[i][j])):
-                        CollectedList[i][j][k] = CollectedList[i][j][k] | {cid}
+        def genLayer(layer):
+            s = max(0, layer-m+1)
+            e = min(layer+1, n)
+            for rL in range(s, e):
+                for rR in range(rL, e):
+                    try:
+                        yield (rL, rR), sum(
+                            getCherry(r, layer) for r in {rL, rR}
+                        )
+                    except ValueError:
+                        continue
+        def getCherry(r, layer):
+            x, y = layer-r, r
+            if grid[x][y] >= 0:
+                return grid[x][y]
+            raise ValueError
+        def getPrev(rs, layer):
+            def getHalfPrev(r):
+                if r > 0:
+                    yield r-1
+                if r < layer:
+                    yield r
+            for rrL in getHalfPrev(rs[0]):
+                for rrR in getHalfPrev(rs[1]):
+                    if rrL < rrR:
+                        yield rrL, rrR
+                    else:
+                        yield rrR, rrL
+        DP = {}
+        try:
+            DP[(0,0)] = getCherry(0, 0)
+        except ValueError:
+            return 0
+        for layer in range(1, m+n-1):
+            DPN = {}
+            for rs, crs in genLayer(layer):
+                for rPrev in getPrev(rs, layer):
+                    if rPrev not in DP:
+                        continue
+                    if rs not in DPN:
+                        DPN[rs] = crs + DP[rPrev]
+                    else:
+                        DPN[rs] = max(DPN[rs], crs + DP[rPrev])
+            DP = DPN
+            if not DP:
+                return 0
+        return DP[(m-1, n-1)]
 
-        # Cherries = [[] for i in range(len(grid)) for j in range(len(grid[i]))]
-        # if grid[0][0] == 1:
-        #     Cherries[0][0] = frozenset([(0, 0)])
-        # if grid[0][0] == -1:
-        #     return 0
-        # for i in range(len(grid)):
-        #     for j in range(len(grid[i])):
-        #         if grid[i][j] == -1:
-        #             continue                
-        #         if i and j:
-        #             paths = Cherries[i-1][j], Cherries[i][j-1] # merge
-        #         elif i:
-        #             paths = Cherries[i-1][j]
-        #         elif j:
-        #             paths = Cherries[i][j-1]
-        #         else:
-        #             paths = []
-                
-        #         if grid[i][j] == 1:
-        #             for pid in range(len(paths)):
-        #                 paths[pid] = paths[pid] + (i)
-        #             (i, j) # add to each path
-                
-        #         Cherries[i][j] = paths
+if __name__ == "__main__":
+    s = Solution()
+    ans = s.cherryPickup(
+        [[0,1,-1],[1,0,-1],[1,1,1]]
+    )
+    print(ans)
