@@ -4,7 +4,7 @@ class Solution:
             return 0
         m, n = len(matrix), len(matrix[0])
         Increases = [[[] for i in range(m)] for j in range(n)]
-        Decreases = [[[] for i in range(m)] for j in range(n)]
+        starts = {(i, j) for i in range(m) for j in range(n)}
         for i in range(m):
             for j in range(n):
                 adjs = []
@@ -19,8 +19,8 @@ class Solution:
                         i, ii = ii, i
                         j, jj = jj, j
                     Increases[i][j].append((ii, jj))
-                    Decreases[ii][jj].append((i, j))
-        queue = [(i, j) for i in range(m) for j in range(n) if not Decreases[i][j]]
+                    starts.discard((ii, jj))
+        queue = list(starts)
         for length in range(m*n):
             if not queue:
                 return length
